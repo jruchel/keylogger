@@ -39,6 +39,7 @@ def post_message(message):
 
 
 def send_message(message):
+    if message is '' or message is None: return
     body = prepare_body(get_ip_address(), message)
     add_to_topic('keyboardInput1', body)
     post_message(body)

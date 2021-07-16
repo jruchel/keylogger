@@ -107,7 +107,8 @@ def on_press(key):
     elif key is Key.backspace:
         delete_last_character()
     else:
-        append_string(str(key)[1])
+        if not (str(key)[1] == 'e' and hasattr(key, 'name')):
+            append_string(str(key)[1])
 
 
 def is_whitespace(key):

